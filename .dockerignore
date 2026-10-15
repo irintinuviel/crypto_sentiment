@@ -5,4 +5,7 @@ __pycache__
 wandb/
 results/
 finetuned_cryptobert_*/
+model/
 .cache/
+*.csv
+*.ipynb

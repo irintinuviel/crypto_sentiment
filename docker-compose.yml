@@ -1,9 +1,10 @@
 services:
-  notebook:
+  api:
     build: .
     ports:
-      - "8888:8888"
-    env_file:
-      - .env
+      - "8000:8000"
+    environment:
+      # lokalny folder z modelem (zamontowany niżej) lub np. TWOJ_LOGIN/cryptobert-sentiment z Hugging Face
+      MODEL_PATH: /app/model
     volumes:
-      - ./:/app
+      - ./model:/app/model:ro

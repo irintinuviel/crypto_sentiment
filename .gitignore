@@ -6,3 +6,5 @@ results/
 finetuned_cryptobert_*/
 .cache/
 misclassified_samples.csv
+model/*
+!model/README.md
