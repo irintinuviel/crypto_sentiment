@@ -1,0 +1,13 @@
+pandas
+numpy
+praw
+transformers>=4.41,<4.50
+datasets
+accelerate
+scikit-learn
+matplotlib
+vaderSentiment
+nlpaug
+nltk
+wandb
+jupyterlab
