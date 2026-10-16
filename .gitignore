@@ -1,10 +1,15 @@
 .env
+.venv/
 .ipynb_checkpoints/
 __pycache__/
-wandb/
-results/
-finetuned_cryptobert_*/
+.pytest_cache/
+.ruff_cache/
 .cache/
-misclassified_samples.csv
-model/*
-!model/README.md
+mlruns/
+mlflow.db
+wandb/
+
+# dane i modele wersjonowane przez DVC
+/data/final_crypto_data.csv
+/data/processed
+/models

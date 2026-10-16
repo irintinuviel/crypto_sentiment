@@ -1,3 +1,4 @@
+# API z predykcjami najlepszego modelu (model montowany w /app/model albo pobierany z Hugging Face Hub)
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -8,14 +9,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# PyTorch w wersji CPU (dużo mniejszy obraz niż wersja z CUDA)
 RUN pip install torch --index-url https://download.pytorch.org/whl/cpu
 
 COPY requirements-api.txt .
 RUN pip install -r requirements-api.txt
 
+COPY src/__init__.py src/text.py src/predict.py ./src/
 COPY app ./app
 
 EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

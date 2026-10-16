@@ -1,0 +1,65 @@
+stages:
+  prepare:
+    cmd: python -m src.data
+    deps:
+      - src/data.py
+      - src/text.py
+      - data/final_crypto_data.csv
+    params:
+      - data
+    outs:
+      - data/processed
+
+  train:
+    cmd: python -m src.train
+    deps:
+      - src/train.py
+      - data/processed/train.csv
+      - data/processed/val.csv
+    params:
+      - train
+      - data.seed
+    outs:
+      - models/model
+      - reports/train_history.csv:
+          cache: false
+      - reports/train_run.json:
+          cache: false
+
+  evaluate:
+    cmd: python -m src.evaluate
+    deps:
+      - src/evaluate.py
+      - src/predict.py
+      - models/model
+      - data/processed/test.csv
+    params:
+      - train.max_length
+    metrics:
+      - reports/metrics.json:
+          cache: false
+    outs:
+      - reports/predictions.csv:
+          cache: false
+      - reports/confusion_matrix.png:
+          cache: false
+      - reports/classification_report.txt:
+          cache: false
+      - reports/misclassified.csv:
+          cache: false
+
+plots:
+  - Strata:
+      x: epoch
+      y:
+        reports/train_history.csv: [train_loss, eval_loss]
+  - Metryki walidacyjne:
+      x: epoch
+      y:
+        reports/train_history.csv: [eval_accuracy, eval_f1]
+  - Macierz pomyłek:
+      template: confusion
+      x: actual
+      y:
+        reports/predictions.csv: predicted
+  - reports/confusion_matrix.png

@@ -1,32 +1,32 @@
 import os
-import re
 from contextlib import asynccontextmanager
 
-import torch
 from fastapi import FastAPI
+from prometheus_client import Counter, Histogram
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-# lokalny folder z modelem albo nazwa repozytorium na Hugging Face Hub
-MODEL_PATH = os.getenv("MODEL_PATH", "/app/model")
-MAX_LENGTH = int(os.getenv("MAX_LENGTH", "128"))
+from src.predict import Predictor
 
-# kolejność etykiet taka jak podczas dostrajania (label_map w notebooku)
-LABELS = ["negative", "neutral", "positive"]
+PREDICTIONS = Counter("sentiment_predictions_total", "Liczba predykcji według etykiety", ["label"])
+CONFIDENCE = Histogram("sentiment_confidence", "Pewność modelu dla przewidzianej etykiety",
+                       buckets=[0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0])
 
 ml = {}
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    ml["tokenizer"] = AutoTokenizer.from_pretrained(MODEL_PATH)
-    ml["model"] = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
-    ml["model"].eval()
+    # lokalny folder z modelem albo nazwa repozytorium na Hugging Face Hub
+    model_path = os.getenv("MODEL_PATH", "/app/model")
+    ml["predictor"] = Predictor(model_path, max_length=int(os.getenv("MAX_LENGTH", "128")))
+    ml["model_path"] = model_path
     yield
     ml.clear()
 
 
 app = FastAPI(title="CryptoBERT – analiza sentymentu", lifespan=lifespan)
+Instrumentator().instrument(app).expose(app, include_in_schema=False)
 
 
 class PredictRequest(BaseModel):
@@ -40,29 +40,15 @@ class Prediction(BaseModel):
     scores: dict[str, float]
 
 
-def clean_text(text: str) -> str:
-    # to samo czyszczenie co przy przygotowaniu danych treningowych
-    return re.sub(r"http\S+", "", text).lower()
-
-
 @app.get("/health")
 def health():
-    return {"status": "ok", "model": MODEL_PATH}
+    return {"status": "ok", "model": ml.get("model_path")}
 
 
 @app.post("/predict", response_model=list[Prediction])
 def predict(request: PredictRequest):
-    tokenizer, model = ml["tokenizer"], ml["model"]
-    inputs = tokenizer([clean_text(t) for t in request.texts], return_tensors="pt",
-                       padding=True, truncation=True, max_length=MAX_LENGTH)
-    with torch.no_grad():
-        probs = torch.softmax(model(**inputs).logits, dim=1)
-
-    return [
-        Prediction(
-            text=text,
-            label=LABELS[int(p.argmax())],
-            scores={label: round(float(score), 4) for label, score in zip(LABELS, p)},
-        )
-        for text, p in zip(request.texts, probs)
-    ]
+    results = ml["predictor"].predict(request.texts)
+    for result in results:
+        PREDICTIONS.labels(result["label"]).inc()
+        CONFIDENCE.observe(result["scores"][result["label"]])
+    return [Prediction(text=text, **result) for text, result in zip(request.texts, results)]

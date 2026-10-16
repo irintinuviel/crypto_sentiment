@@ -1,0 +1,26 @@
+# Środowisko uczenia maszynowego: JupyterLab + potok DVC + MLflow.
+# GPU: docker build --build-arg TORCH_INDEX=https://download.pytorch.org/whl/cu121 -f Dockerfile.train .
+FROM python:3.11-slim
+
+ARG TORCH_INDEX=https://download.pytorch.org/whl/cpu
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    NLTK_DATA=/usr/local/share/nltk_data
+
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/* \
+    && git config --system --add safe.directory '*'
+
+RUN pip install torch --index-url ${TORCH_INDEX}
+
+COPY requirements-train.txt /tmp/
+RUN pip install -r /tmp/requirements-train.txt \
+    && python -m nltk.downloader -d ${NLTK_DATA} wordnet omw-1.4 averaged_perceptron_tagger_eng
+
+WORKDIR /workspace
+
+EXPOSE 8888
+
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--IdentityProvider.token=''"]

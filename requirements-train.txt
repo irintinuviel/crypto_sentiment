@@ -1,13 +1,19 @@
-pandas
-numpy
-praw
-transformers>=4.41,<4.50
+# PyTorch instalowany osobno: CPU lub CUDA (patrz Dockerfile.train)
+transformers>=4.46,<5
 datasets
 accelerate
 scikit-learn
+pandas
 matplotlib
+pyyaml
+python-dotenv
+mlflow>=2.17,<3
+dvc
+optuna
+jupyterlab
+ipywidgets
+# budowa zbioru danych (src/dataset.py)
+praw
 vaderSentiment
 nlpaug
 nltk
-wandb
-jupyterlab

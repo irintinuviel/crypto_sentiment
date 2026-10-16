@@ -1,0 +1,63 @@
+{
+  "uid": "crypto-sentiment-api",
+  "title": "CryptoBERT API – monitoring",
+  "schemaVersion": 39,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Zapytania /predict na sekundę",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "sum by (status) (rate(http_requests_total{handler=\"/predict\"}[1m]))", "legendFormat": "{{status}}" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Czas odpowiedzi /predict (p50, p95)",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.5, sum by (le) (rate(http_request_duration_seconds_bucket{handler=\"/predict\"}[5m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{handler=\"/predict\"}[5m])))", "legendFormat": "p95" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "piechart",
+      "title": "Rozkład przewidzianych etykiet",
+      "gridPos": { "x": 0, "y": 8, "w": 8, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }, "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (label) (sentiment_predictions_total)", "legendFormat": "{{label}}" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Predykcje w czasie według etykiety",
+      "gridPos": { "x": 8, "y": 8, "w": 8, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "sum by (label) (increase(sentiment_predictions_total[5m]))", "legendFormat": "{{label}}" }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "gauge",
+      "title": "Średnia pewność modelu (5 min)",
+      "gridPos": { "x": 16, "y": 8, "w": 8, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(sentiment_confidence_sum[5m])) / sum(rate(sentiment_confidence_count[5m]))" }
+      ]
+    }
+  ]
+}

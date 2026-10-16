@@ -1,0 +1,14 @@
+# Nakładka GPU (wymaga sterownika NVIDIA i obsługi GPU w Dockerze – w Docker Desktop przez WSL2)
+services:
+  jupyter:
+    build:
+      args:
+        TORCH_INDEX: https://download.pytorch.org/whl/cu121
+    image: crypto-sentiment-train-gpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

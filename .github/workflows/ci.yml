@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  test:
+    name: Lint i testy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-*.txt
+      - name: Instalacja zależności
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements-dev.txt
+      - name: Lint (ruff)
+        run: ruff check .
+      - name: Walidacja potoku DVC
+        run: dvc dag
+      - name: Testy (pytest)
+        run: pytest -v
+
+  docker:
+    name: Obrazy Dockera
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - name: api
+            dockerfile: Dockerfile
+          - name: train
+            dockerfile: Dockerfile.train
+    steps:
+      - uses: actions/checkout@v4
+      - name: Nazwa obrazu (małe litery)
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}-${{ matrix.name }}" >> $GITHUB_ENV
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.event_name == 'push'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  pipeline:
+    name: Szybki przebieg potoku ML (DVC + MLflow)
+    needs: test
+    # wymaga zmiennej DAGSHUB_REPO oraz sekretów DAGSHUB_USER i DAGSHUB_TOKEN w ustawieniach repozytorium
+    if: github.event_name != 'pull_request' && vars.DAGSHUB_REPO != ''
+    runs-on: ubuntu-latest
+    env:
+      MLFLOW_TRACKING_URI: https://dagshub.com/${{ vars.DAGSHUB_REPO }}.mlflow
+      MLFLOW_TRACKING_USERNAME: ${{ secrets.DAGSHUB_USER }}
+      MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
+      MLFLOW_EXPERIMENT_NAME: ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-*.txt
+      - name: Instalacja zależności
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements-train.txt
+      - name: Pobranie danych z DagsHub (DVC)
+        run: |
+          dvc remote modify origin --local auth basic
+          dvc remote modify origin --local user "${{ secrets.DAGSHUB_USER }}"
+          dvc remote modify origin --local password "${{ secrets.DAGSHUB_TOKEN }}"
+          dvc pull data/final_crypto_data.csv.dvc
+      - name: Trening na małej próbce (CPU)
+        run: |
+          python -m src.params data.sample_size=500 train.epochs=1
+          dvc repro
+      - name: Podsumowanie metryk
+        run: |
+          echo "## Metryki (próbka 500 tekstów, 1 epoka)" >> $GITHUB_STEP_SUMMARY
+          dvc metrics show --md >> $GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: reports/

@@ -1,0 +1,5 @@
+outs:
+- md5: 058ce0b24c96f226c3c899d225192a7f
+  size: 8294899
+  hash: md5
+  path: final_crypto_data.csv

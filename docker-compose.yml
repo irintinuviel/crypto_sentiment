@@ -1,10 +1,71 @@
+# Profile:
+#   docker compose --profile train up   -> JupyterLab (trening, potok DVC)
+#   docker compose --profile serve up   -> API + Prometheus + Grafana
+#   docker compose --profile ci up      -> Jenkins
+# GPU: docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile train up
+
 services:
+  jupyter:
+    profiles: [train]
+    build:
+      context: .
+      dockerfile: Dockerfile.train
+    image: crypto-sentiment-train
+    ports:
+      - "8888:8888"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      HF_HOME: /workspace/.cache/huggingface
+    volumes:
+      - ./:/workspace
+    shm_size: 2gb
+
   api:
+    profiles: [serve]
     build: .
+    image: crypto-sentiment-api
+    container_name: crypto-api
     ports:
       - "8000:8000"
-    environment:
-      # lokalny folder z modelem (zamontowany niżej) lub np. TWOJ_LOGIN/cryptobert-sentiment z Hugging Face
-      MODEL_PATH: /app/model
     volumes:
-      - ./model:/app/model:ro
+      - ./models/model:/app/model:ro
+
+  prometheus:
+    profiles: [serve]
+    image: prom/prometheus:v2.53.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    profiles: [serve]
+    image: grafana/grafana:11.1.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+  jenkins:
+    profiles: [ci]
+    build: ./jenkins
+    container_name: jenkins
+    user: root
+    ports:
+      - "8080:8080"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+  default:
+    name: crypto-net
+
+volumes:
+  jenkins_home:

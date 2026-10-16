@@ -1,0 +1,16 @@
+data:
+  input: data/final_crypto_data.csv
+  val_size: 0.1
+  test_size: 0.1
+  seed: 42
+  sample_size: 0
+train:
+  base_model: ElKulako/cryptobert
+  max_length: 128
+  learning_rate: 2.0e-05
+  batch_size: 16
+  epochs: 5
+  weight_decay: 0.01
+  lr_scheduler: linear
+  early_stopping_patience: 2
+  fp16: false
