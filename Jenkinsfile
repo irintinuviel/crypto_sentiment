@@ -75,6 +75,8 @@ pipeline {
                                 usernameVariable: 'MLFLOW_TRACKING_USERNAME', passwordVariable: 'MLFLOW_TRACKING_PASSWORD')]) {
                             sh 'python -c "import torch; print(\'CUDA:\', torch.cuda.is_available())"'
                             sh 'echo "MLflow: $MLFLOW_TRACKING_URI, eksperyment: $MLFLOW_EXPERIMENT_NAME"'
+                            // blokady po przerwanym buildzie (buildy nie działają równolegle – disableConcurrentBuilds)
+                            sh 'rm -f .dvc/tmp/rwlock .dvc/tmp/lock'
                             sh 'dvc repro'
                             sh 'dvc metrics show'
                         }
