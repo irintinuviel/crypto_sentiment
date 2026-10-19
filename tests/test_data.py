@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 import src.dataset
+import src.fetch_reddit
 from src.data import load_dataset, prepare, split_dataset
 from src.dataset import crypto_vader, filter_comments, majority, vader_vote
 from src.params import override
@@ -90,3 +91,18 @@ def test_relabel_uses_crypto_vader(tmp_path, monkeypatch):
 
     assert pd.read_csv(tmp_path / "relabeled.csv")["pseudo_label"].tolist() == ["positive", "neutral"]
     assert json.loads((tmp_path / "relabel.json").read_text())["changed"] == 1
+
+
+def test_fetch_reddit_appends_only_new_texts(tmp_path, monkeypatch):
+    path = tmp_path / "final.csv"
+    old = "bitcoin is old news here"
+    pd.DataFrame({"text": [old], "pseudo_label": ["neutral"]}).to_csv(path, index=False)
+    scraped = pd.DataFrame({"text": [old, "eth is pumping today again", "no coin here at all"]})
+    monkeypatch.setattr(src.fetch_reddit, "scrape_reddit", lambda subreddit, limit: scraped)
+    monkeypatch.setattr(src.fetch_reddit, "pseudo_label", lambda df: df.assign(pseudo_label="positive"))
+    monkeypatch.setattr(src.fetch_reddit, "augment", lambda df, n: df[["text", "pseudo_label"]])
+
+    result = src.fetch_reddit.fetch_reddit(limit=1, path=str(path))
+
+    assert result["text"].tolist() == [old, "eth is pumping today again"]
+    assert len(pd.read_csv(path)) == 2

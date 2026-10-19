@@ -35,6 +35,7 @@ Docker, CI (GitHub Actions), potok w Jenkinsie, DVC + MLflow (DagsHub) oraz moni
 ```
 src/
   dataset.py        budowa zbioru: Reddit → filtrowanie → pseudo-etykiety (VADER + slang krypto) → augmentacja
+  fetch_reddit.py   pobranie nowych komentarzy z Reddita i dołączenie do zbioru (Jenkins: FETCH_REDDIT)
   relabel.py        etap relabel: ponowne etykietowanie zbioru ze słownikiem slangu krypto
   data.py           etap prepare: podział train / val / test
   train.py          etap train: dostrajanie + MLflow
@@ -111,6 +112,7 @@ docker compose --profile ci up -d --build
 
 1. http://localhost:8080 – hasło startowe: `docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword`.
 2. *Manage Jenkins → Credentials*: dodaj *Username with password* o ID `dagshub` (login i token DagsHub).
+   Opcjonalnie ID `reddit` (client id i secret Reddit API) – potrzebne tylko przy parametrze `FETCH_REDDIT`.
 3. *New Item → Pipeline → Pipeline script from SCM* → Git, adres repozytorium, ścieżka `Jenkinsfile`.
 4. *Build with Parameters* – epoki, learning rate, batch, rozmiar próbki, próg F1, GPU, rejestracja, wdrożenie.
 

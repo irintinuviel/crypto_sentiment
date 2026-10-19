@@ -9,6 +9,8 @@ pipeline {
     }
 
     parameters {
+        booleanParam(name: 'FETCH_REDDIT', defaultValue: false, description: 'Pobranie nowych komentarzy z r/CryptoCurrency i dołączenie ich do zbioru (credentials: reddit)')
+        string(name: 'REDDIT_LIMIT', defaultValue: '100', description: 'Liczba najpopularniejszych postów do pobrania (przy FETCH_REDDIT)')
         string(name: 'EPOCHS', defaultValue: '5', description: 'Liczba epok')
         string(name: 'LEARNING_RATE', defaultValue: '2e-5', description: 'Współczynnik uczenia')
         choice(name: 'LR_SCHEDULER', choices: ['linear', 'cosine'], description: 'Harmonogram współczynnika uczenia')
@@ -57,6 +59,17 @@ pipeline {
                         }
                     }
                 }
+                stage('Nowe dane z Reddita') {
+                    when { expression { params.FETCH_REDDIT } }
+                    steps {
+                        withCredentials([usernamePassword(credentialsId: 'reddit',
+                                usernameVariable: 'REDDIT_CLIENT_ID', passwordVariable: 'REDDIT_CLIENT_SECRET')]) {
+                            sh "python -m src.fetch_reddit --limit ${params.REDDIT_LIMIT}"
+                        }
+                        // nowa wersja danych w DVC; zaktualizowany plik .dvc jest w artefaktach builda (do commita)
+                        sh 'dvc add data/final_crypto_data.csv && dvc push data/final_crypto_data.csv.dvc'
+                    }
+                }
                 stage('Parametry') {
                     steps {
                         sh """
@@ -103,7 +116,7 @@ pipeline {
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'reports/**, params.yaml, dvc.lock', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'reports/**, params.yaml, dvc.lock, data/final_crypto_data.csv.dvc', allowEmptyArchive: true
                 }
             }
         }
