@@ -13,6 +13,7 @@ pipeline {
         string(name: 'LEARNING_RATE', defaultValue: '2e-5', description: 'Współczynnik uczenia')
         choice(name: 'LR_SCHEDULER', choices: ['linear', 'cosine'], description: 'Harmonogram współczynnika uczenia')
         string(name: 'WEIGHT_DECAY', defaultValue: '0.01', description: 'Weight decay (np. 0.01, 0.08)')
+        string(name: 'EARLY_STOPPING_PATIENCE', defaultValue: '2', description: 'Early stopping: liczba epok bez poprawy eval_loss (0 = wyłączone)')
         string(name: 'BATCH_SIZE', defaultValue: '16', description: 'Rozmiar batcha (GTX 1660 Ti: maks. 16–32)')
         string(name: 'SAMPLE_SIZE', defaultValue: '0', description: 'Liczba próbek (0 = cały zbiór)')
         string(name: 'MIN_F1', defaultValue: '0.80', description: 'Minimalne F1 (ważone) na zbiorze testowym')
@@ -62,6 +63,7 @@ pipeline {
                                 train.learning_rate=${params.LEARNING_RATE} \
                                 train.lr_scheduler=${params.LR_SCHEDULER} \
                                 train.weight_decay=${params.WEIGHT_DECAY} \
+                                train.early_stopping_patience=${params.EARLY_STOPPING_PATIENCE} \
                                 train.batch_size=${params.BATCH_SIZE} \
                                 data.sample_size=${params.SAMPLE_SIZE}
                         """

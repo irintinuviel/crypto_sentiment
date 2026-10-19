@@ -100,9 +100,14 @@ def train(params: dict, data_dir: str = "data/processed", model_dir: str | None 
             processing_class=tokenizer,
             data_collator=DataCollatorWithPadding(tokenizer),
             compute_metrics=compute_metrics,
-            callbacks=[EarlyStoppingCallback(early_stopping_patience=p["early_stopping_patience"])],
+            # patience 0 = bez early stoppingu (pełna liczba epok)
+            callbacks=[EarlyStoppingCallback(early_stopping_patience=p["early_stopping_patience"])]
+            if p["early_stopping_patience"] > 0 else [],
         )
         trainer.train()
+        if trainer.state.global_step < trainer.state.max_steps:
+            print(f"Early stopping po {round(trainer.state.epoch)} z {p['epochs']} epok")
+        mlflow.log_metric("stopped_epoch", round(trainer.state.epoch))
 
         history = history_to_frame(trainer.state.log_history)
         best = trainer.evaluate()
