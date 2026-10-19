@@ -12,7 +12,14 @@ def setup_mlflow(experiment: str | None = None) -> None:
     load_dotenv()
     experiment = experiment or os.getenv("MLFLOW_EXPERIMENT_NAME", "cryptobert-sentiment")
     os.environ["MLFLOW_EXPERIMENT_NAME"] = experiment
-    mlflow.set_experiment(experiment)
+    print(f"MLflow: {mlflow.get_tracking_uri()} (eksperyment: {experiment})")
+    try:
+        mlflow.set_experiment(experiment)
+    except mlflow.exceptions.MlflowException as e:
+        raise RuntimeError(
+            f"Brak dostępu do MLflow pod {mlflow.get_tracking_uri()} – sprawdź MLFLOW_TRACKING_URI "
+            "(https://dagshub.com/<login>/<repozytorium>.mlflow) oraz login i token"
+        ) from e
 
 
 def flatten(params: dict, prefix: str = "") -> dict:

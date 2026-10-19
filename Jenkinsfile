@@ -21,7 +21,7 @@ pipeline {
 
     environment {
         DAGSHUB_REPO = 'irintinuviel/crypto_sentiment'
-        MLFLOW_TRACKING_URI = "https://dagshub.com/${DAGSHUB_REPO}.mlflow"
+        MLFLOW_TRACKING_URI = 'https://dagshub.com/irintinuviel/crypto_sentiment.mlflow'
         MLFLOW_EXPERIMENT_NAME = 'jenkins'
     }
 
@@ -68,6 +68,7 @@ pipeline {
                         withCredentials([usernamePassword(credentialsId: 'dagshub',
                                 usernameVariable: 'MLFLOW_TRACKING_USERNAME', passwordVariable: 'MLFLOW_TRACKING_PASSWORD')]) {
                             sh 'python -c "import torch; print(\'CUDA:\', torch.cuda.is_available())"'
+                            sh 'echo "MLflow: $MLFLOW_TRACKING_URI, eksperyment: $MLFLOW_EXPERIMENT_NAME"'
                             sh 'dvc repro'
                             sh 'dvc metrics show'
                         }
