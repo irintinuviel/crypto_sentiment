@@ -46,7 +46,6 @@ def filter_comments(df: pd.DataFrame, min_words: int = 4, max_words: int = 100) 
     return df[matches == 1].reset_index(drop=True)
 
 
-# Slang z r/CryptoCurrency, którego nie zna ogólny słownik VADER 
 CRYPTO_LEXICON = {
     # pozytywne
     "moon": 2.5, "mooning": 2.5, "moonshot": 2.0, "rocket": 1.5, "bullish": 2.5, "bull": 1.5,
@@ -61,7 +60,7 @@ CRYPTO_LEXICON = {
     "tanking": -2.5, "tanked": -2.5, "liquidated": -2.5, "ngmi": -2.0, "capitulation": -2.0,
     "goingdown": -1.5,
 }
-# Wyrażenia wielowyrazowe (VADER ocenia pojedyncze słowa) – zamieniane na jeden token ze słownika
+
 CRYPTO_PHRASES = {
     "to the moon": "moon", "going up": "goingup", "goes up": "goingup", "went up": "goingup",
     "going down": "goingdown", "goes down": "goingdown", "went down": "goingdown",
