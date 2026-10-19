@@ -1,5 +1,9 @@
-data:
+relabel:
   input: data/final_crypto_data.csv
+  output: data/relabeled_crypto_data.csv
+  batch_size: 64
+data:
+  input: data/relabeled_crypto_data.csv
   val_size: 0.1
   test_size: 0.1
   seed: 42

@@ -51,6 +51,8 @@ pipeline {
                                 dvc remote modify origin --local user "$DAGSHUB_USER"
                                 dvc remote modify origin --local password "$DAGSHUB_TOKEN"
                                 dvc pull data/final_crypto_data.csv.dvc
+                                # wynik etapu relabel z poprzednich buildów (bez ponownego etykietowania)
+                                dvc pull --run-cache relabel || echo "Brak run-cache dla relabel – etap zostanie policzony"
                             '''
                         }
                     }
@@ -79,6 +81,8 @@ pipeline {
                             sh 'rm -f .dvc/tmp/rwlock .dvc/tmp/lock'
                             sh 'dvc repro'
                             sh 'dvc metrics show'
+                            // dane po ponownym etykietowaniu i model na DagsHub (CI pobiera je zamiast liczyć od nowa)
+                            sh 'dvc push --run-cache'
                         }
                     }
                 }

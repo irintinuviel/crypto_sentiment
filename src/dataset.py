@@ -46,32 +46,84 @@ def filter_comments(df: pd.DataFrame, min_words: int = 4, max_words: int = 100) 
     return df[matches == 1].reset_index(drop=True)
 
 
-def pseudo_label(df: pd.DataFrame) -> pd.DataFrame:
-    """Etykietowanie głosowaniem większościowym: VADER, kk08/CryptoBERT, ElKulako/CryptoBERT."""
-    import torch
-    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+# Slang z r/CryptoCurrency, którego nie zna ogólny słownik VADER 
+CRYPTO_LEXICON = {
+    # pozytywne
+    "moon": 2.5, "mooning": 2.5, "moonshot": 2.0, "rocket": 1.5, "bullish": 2.5, "bull": 1.5,
+    "pump": 1.5, "pumping": 1.5, "hodl": 1.5, "hodling": 1.5, "lambo": 2.0, "ath": 2.0,
+    "gains": 2.0, "rally": 2.0, "rallying": 2.0, "surge": 2.0, "surging": 2.0, "skyrocket": 2.5,
+    "skyrocketing": 2.5, "soaring": 2.0, "breakout": 1.5, "undervalued": 1.5, "wagmi": 2.0,
+    "goingup": 1.5,
+    # negatywne
+    "bearish": -2.5, "bear": -1.5, "dump": -2.0, "dumping": -2.0, "dumped": -2.0, "rekt": -2.5,
+    "fud": -1.5, "scam": -3.0, "scammer": -3.0, "rugpull": -3.0, "rugged": -3.0, "ponzi": -3.0,
+    "bagholder": -2.0, "bagholders": -2.0, "overvalued": -1.5, "plummet": -2.5, "plummeting": -2.5,
+    "tanking": -2.5, "tanked": -2.5, "liquidated": -2.5, "ngmi": -2.0, "capitulation": -2.0,
+    "goingdown": -1.5,
+}
+# Wyrażenia wielowyrazowe (VADER ocenia pojedyncze słowa) – zamieniane na jeden token ze słownika
+CRYPTO_PHRASES = {
+    "to the moon": "moon", "going up": "goingup", "goes up": "goingup", "went up": "goingup",
+    "going down": "goingdown", "goes down": "goingdown", "went down": "goingdown",
+    "rug pull": "rugpull", "bag holder": "bagholder", "all time high": "ath",
+}
+
+LABELER_MODELS = [("kk08/CryptoBERT", ["negative", "positive"]),
+                  ("ElKulako/cryptobert", ["negative", "neutral", "positive"])]
+
+
+def crypto_vader():
+    """VADER ze słownikiem rozszerzonym o slang kryptowalutowy."""
     from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
     vader = SentimentIntensityAnalyzer()
-    models = {
-        name: (AutoTokenizer.from_pretrained(name),
-               AutoModelForSequenceClassification.from_pretrained(name).eval(), labels)
-        for name, labels in [("kk08/CryptoBERT", ["negative", "positive"]),
-                             ("ElKulako/cryptobert", ["negative", "neutral", "positive"])]
-    }
+    vader.lexicon.update(CRYPTO_LEXICON)
+    return vader
 
-    @torch.no_grad()
-    def classify(text: str) -> tuple[str, list[str]]:
-        score = vader.polarity_scores(text)["compound"]
-        votes = ["positive" if score > 0.05 else "negative" if score < -0.05 else "neutral"]
-        for tokenizer, model, labels in models.values():
-            tokens = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
-            votes.append(labels[int(model(**tokens).logits.argmax(dim=1))])
-        final = "neutral" if len(set(votes)) == 3 else max(set(votes), key=votes.count)
-        return final, votes
+
+def vader_vote(vader, text: str) -> str:
+    text = str(text).lower()
+    for phrase, token in CRYPTO_PHRASES.items():
+        text = text.replace(phrase, token)
+    score = vader.polarity_scores(text)["compound"]
+    return "positive" if score > 0.05 else "negative" if score < -0.05 else "neutral"
+
+
+def model_votes(texts: list[str], batch_size: int = 64) -> list[list[str]]:
+    """Głosy modeli kk08/CryptoBERT i ElKulako/CryptoBERT (wsadowo, na GPU jeśli jest dostępne)."""
+    import torch
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    votes = [[] for _ in texts]
+    for name, labels in LABELER_MODELS:
+        tokenizer = AutoTokenizer.from_pretrained(name)
+        model = AutoModelForSequenceClassification.from_pretrained(name).to(device).eval()
+        with torch.no_grad():
+            for start in range(0, len(texts), batch_size):
+                batch = [str(t) for t in texts[start:start + batch_size]]
+                tokens = tokenizer(batch, return_tensors="pt", padding=True, truncation=True,
+                                   max_length=512).to(device)
+                for i, pred in enumerate(model(**tokens).logits.argmax(dim=1).tolist()):
+                    votes[start + i].append(labels[pred])
+        print(f"{name}: {len(texts)} tekstów")
+    return votes
+
+
+def majority(votes: list[str]) -> str:
+    """Głosowanie większościowe; trzy różne głosy oznaczają brak zgody, czyli neutral."""
+    return "neutral" if len(set(votes)) == 3 else max(set(votes), key=votes.count)
+
+
+def pseudo_label(df: pd.DataFrame, batch_size: int = 64) -> pd.DataFrame:
+    """Głosowanie większościowe: VADER (+ slang krypto), kk08/CryptoBERT, ElKulako/CryptoBERT."""
+    vader = crypto_vader()
+    texts = df["text"].tolist()
+    votes = [[vader_vote(vader, text)] + other for text, other in zip(texts, model_votes(texts, batch_size))]
 
     df = df.copy()
-    df["pseudo_label"], df["model_votes"] = zip(*df["text"].apply(classify))
+    df["pseudo_label"] = [majority(v) for v in votes]
+    df["model_votes"] = votes
     return df
 
 

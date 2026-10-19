@@ -1,9 +1,13 @@
+import json
+
 import pandas as pd
 import pytest
 
+import src.dataset
 from src.data import load_dataset, prepare, split_dataset
-from src.dataset import filter_comments
+from src.dataset import crypto_vader, filter_comments, majority, vader_vote
 from src.params import override
+from src.relabel import relabel
 from src.text import clean_text
 
 
@@ -54,3 +58,35 @@ def test_override_params():
     assert params["train"]["epochs"] == 5
     with pytest.raises(KeyError):
         override(params, ["train.unknown=1"])
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("bitcoin is going to the moon", "positive"),
+    ("btc to the moon!", "positive"),
+    ("bitcoin is going up", "positive"),
+    ("eth is dumping hard, got rekt", "negative"),
+    ("eth fees are killing me", "negative"),
+    ("only 21 million bitcoin will ever be mined", "neutral"),
+])
+def test_vader_understands_crypto_slang(text, expected):
+    assert vader_vote(crypto_vader(), text) == expected
+
+
+def test_majority_vote():
+    assert majority(["positive", "positive", "neutral"]) == "positive"
+    assert majority(["negative", "neutral", "positive"]) == "neutral"
+
+
+def test_relabel_uses_crypto_vader(tmp_path, monkeypatch):
+    # bez pobierania modeli: oba modele głosują positive / neutral, decyduje VADER
+    monkeypatch.setattr(src.dataset, "model_votes",
+                        lambda texts, batch_size: [["positive", "neutral"]] * len(texts))
+    source = tmp_path / "final.csv"
+    pd.DataFrame({"text": ["bitcoin to the moon", "eth got rekt again"],
+                  "pseudo_label": ["neutral", "neutral"]}).to_csv(source, index=False)
+    params = {"relabel": {"input": str(source), "output": str(tmp_path / "relabeled.csv"), "batch_size": 8}}
+
+    relabel(params, reports_dir=tmp_path)
+
+    assert pd.read_csv(tmp_path / "relabeled.csv")["pseudo_label"].tolist() == ["positive", "neutral"]
+    assert json.loads((tmp_path / "relabel.json").read_text())["changed"] == 1

@@ -1,10 +1,24 @@
 stages:
+  relabel:
+    cmd: python -m src.relabel
+    deps:
+      - src/relabel.py
+      - src/dataset.py
+      - data/final_crypto_data.csv
+    params:
+      - relabel
+    outs:
+      - data/relabeled_crypto_data.csv
+    metrics:
+      - reports/relabel.json:
+          cache: false
+
   prepare:
     cmd: python -m src.data
     deps:
       - src/data.py
       - src/text.py
-      - data/final_crypto_data.csv
+      - data/relabeled_crypto_data.csv
     params:
       - data
     outs:

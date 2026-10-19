@@ -11,5 +11,6 @@ wandb/
 
 # dane i modele wersjonowane przez DVC
 /data/final_crypto_data.csv
+/data/relabeled_crypto_data.csv
 /data/processed
 /models

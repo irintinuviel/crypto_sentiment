@@ -34,7 +34,8 @@ Docker, CI (GitHub Actions), potok w Jenkinsie, DVC + MLflow (DagsHub) oraz moni
 
 ```
 src/
-  dataset.py        budowa zbioru: Reddit → filtrowanie → pseudo-etykiety → augmentacja
+  dataset.py        budowa zbioru: Reddit → filtrowanie → pseudo-etykiety (VADER + slang krypto) → augmentacja
+  relabel.py        etap relabel: ponowne etykietowanie zbioru ze słownikiem slangu krypto
   data.py           etap prepare: podział train / val / test
   train.py          etap train: dostrajanie + MLflow
   evaluate.py       etap evaluate: metryki, macierz pomyłek, błędne predykcje
@@ -82,7 +83,7 @@ Ten sam proces bez notebooka (w kontenerze lub lokalnie):
 
 ```bash
 dvc pull                  # dane (i ostatni model)
-dvc repro                 # prepare → train → evaluate (tylko zmienione etapy)
+dvc repro                 # relabel → prepare → train → evaluate (tylko zmienione etapy)
 dvc metrics show          # metryki
 dvc plots show            # wykresy → dvc_plots/index.html
 dvc params diff / dvc metrics diff   # porównanie z poprzednim commitem

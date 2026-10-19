@@ -95,6 +95,8 @@ jobs:
           dvc remote modify origin --local user "${{ secrets.DAGSHUB_USER }}"
           dvc remote modify origin --local password "${{ secrets.DAGSHUB_TOKEN }}"
           dvc pull data/final_crypto_data.csv.dvc
+          # etykiety z etapu relabel policzone wcześniej w Jenkinsie (GPU); bez nich etap liczy się na CPU
+          dvc pull --run-cache relabel || echo "Brak run-cache dla relabel – etap zostanie policzony"
       - name: Trening na małej próbce (CPU)
         run: |
           python -m src.params data.sample_size=500 train.epochs=1
