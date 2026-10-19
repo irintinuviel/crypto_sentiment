@@ -20,7 +20,7 @@ pipeline {
     }
 
     environment {
-        DAGSHUB_REPO = 'TWOJ_LOGIN/crypto-sentiment'
+        DAGSHUB_REPO = 'irintinuviel/crypto_sentiment'
         MLFLOW_TRACKING_URI = "https://dagshub.com/${DAGSHUB_REPO}.mlflow"
         MLFLOW_EXPERIMENT_NAME = 'jenkins'
     }

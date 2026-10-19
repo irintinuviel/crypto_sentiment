@@ -57,14 +57,14 @@ tests/              testy (pytest)
 2. **Plik `.env`:** `cp .env.example .env` i uzupełnij login, token i adres MLflow.
 3. **DVC:** wpisz swój login w adresie zdalnego repozytorium i wyślij dane:
    ```bash
-   dvc remote modify origin url https://dagshub.com/TWOJ_LOGIN/crypto-sentiment.dvc
+   dvc remote modify origin url https://dagshub.com/irintinuviel/crypto_sentiment.dvc
    dvc remote modify origin --local auth basic
-   dvc remote modify origin --local user TWOJ_LOGIN
+   dvc remote modify origin --local user irintinuviel
    dvc remote modify origin --local password TWOJ_TOKEN
    dvc push
    ```
 4. **GitHub:** w *Settings → Secrets and variables → Actions* dodaj sekrety `DAGSHUB_USER`, `DAGSHUB_TOKEN`
-   oraz zmienną `DAGSHUB_REPO` (np. `TWOJ_LOGIN/crypto-sentiment`).
+   oraz zmienną `DAGSHUB_REPO` (np. `irintinuviel/crypto_sentiment`).
 5. Zamień `TWOJ_LOGIN` w `Jenkinsfile` i w tym README.
 
 ## 1. Trening – Jupyter w Dockerze
