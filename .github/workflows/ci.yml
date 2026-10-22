@@ -70,15 +70,22 @@ jobs:
   pipeline:
     name: Szybki przebieg potoku ML (DVC + MLflow)
     needs: test
-    # wymaga zmiennej DAGSHUB_REPO oraz sekretów DAGSHUB_USER i DAGSHUB_TOKEN w ustawieniach repozytorium
-    if: github.event_name != 'pull_request' && vars.DAGSHUB_REPO != ''
+    # wymaga sekretów DAGSHUB_USER i DAGSHUB_TOKEN; repozytorium DagsHub można zmienić zmienną DAGSHUB_REPO
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     env:
-      MLFLOW_TRACKING_URI: https://dagshub.com/${{ vars.DAGSHUB_REPO }}.mlflow
+      MLFLOW_TRACKING_URI: https://dagshub.com/${{ vars.DAGSHUB_REPO || 'irintinuviel/crypto_sentiment' }}.mlflow
       MLFLOW_TRACKING_USERNAME: ${{ secrets.DAGSHUB_USER }}
       MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
       MLFLOW_EXPERIMENT_NAME: ci
     steps:
+      - name: Sprawdzenie sekretów DagsHub
+        run: |
+          if [ -z "$MLFLOW_TRACKING_USERNAME" ] || [ -z "$MLFLOW_TRACKING_PASSWORD" ]; then
+            echo "::error::Brak sekretów DAGSHUB_USER / DAGSHUB_TOKEN (Settings -> Secrets and variables -> Actions)"
+            exit 1
+          fi
+          echo "MLflow: $MLFLOW_TRACKING_URI, eksperyment: $MLFLOW_EXPERIMENT_NAME"
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
