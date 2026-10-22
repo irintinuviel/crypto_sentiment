@@ -128,7 +128,7 @@ pipeline {
                     docker build -t crypto-sentiment-api:${BUILD_NUMBER} -t crypto-sentiment-api:latest .
                     docker network create crypto-net || true
                     docker rm -f crypto-api || true
-                    docker create --name crypto-api --network crypto-net -p 8000:8000 crypto-sentiment-api:${BUILD_NUMBER}
+                    docker create --name crypto-api --network crypto-net --restart unless-stopped -p 8000:8000 crypto-sentiment-api:${BUILD_NUMBER}
                     docker cp models/model crypto-api:/app/model
                     docker start crypto-api
                 '''

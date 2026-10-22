@@ -122,6 +122,9 @@ Etapy: **Dane (DVC) → Parametry → Trening i ewaluacja (`dvc repro`, GPU) →
 ## 4. API i monitoring
 
 ```bash
+# API wdrożone przez Jenkinsa (kontener crypto-api z modelem z ostatniego buildu) + monitoring
+docker compose --profile monitoring up -d
+# albo API z lokalnym modelem z ./models/model (najpierw: docker rm -f crypto-api)
 docker compose --profile serve up --build
 ```
 

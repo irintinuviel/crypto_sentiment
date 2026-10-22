@@ -1,6 +1,7 @@
 # Profile:
 #   docker compose --profile train up   -> JupyterLab (trening, potok DVC)
-#   docker compose --profile serve up   -> API + Prometheus + Grafana
+#   docker compose --profile serve up   -> API (model z ./models/model) + Prometheus + Grafana
+#   docker compose --profile monitoring up -> tylko Prometheus + Grafana (dla API wdrożonego przez Jenkinsa)
 #   docker compose --profile ci up      -> Jenkins
 # GPU: docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile train up
 
@@ -33,7 +34,7 @@ services:
       - ./models/model:/app/model:ro
 
   prometheus:
-    profiles: [serve]
+    profiles: [serve, monitoring]
     image: prom/prometheus:v2.53.0
     ports:
       - "9090:9090"
@@ -41,7 +42,7 @@ services:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
 
   grafana:
-    profiles: [serve]
+    profiles: [serve, monitoring]
     image: grafana/grafana:11.1.0
     ports:
       - "3000:3000"
