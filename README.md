@@ -1,8 +1,8 @@
-# Analiza sentymentu komentarzy o kryptowalutach (CryptoBERT)
+# Analiza sentymentu komentarzy o kryptowalutach modelem CryptoBERT
 
 ![CI](https://github.com/TWOJ_LOGIN/crypto-sentiment/actions/workflows/ci.yml/badge.svg)
 
-Dostrajanie modelu [ElKulako/cryptobert](https://huggingface.co/ElKulako/cryptobert) na komentarzach z r/CryptoCurrency
+Dostrajanie modelu [ElKulako/cryptobert](https://huggingface.co/ElKulako/cryptobert) na komentarzach z subreddita r/CryptoCurrency
 (etykiety: głosowanie VADER, kk08/CryptoBERT i ElKulako/CryptoBERT) wraz z pełnym procesem MLOps:
 Docker, CI (GitHub Actions), potok w Jenkinsie, DVC + MLflow (DagsHub) oraz monitoring API (Prometheus + Grafana).
 
@@ -28,7 +28,7 @@ Docker, CI (GitHub Actions), potok w Jenkinsie, DVC + MLflow (DagsHub) oraz moni
 | 2. CI | `.github/workflows/ci.yml`: ruff, walidacja potoku DVC, pytest (w tym trening na malutkim modelu i test API), budowa i publikacja obrazów w GHCR, szybki przebieg potoku z metrykami w podsumowaniu |
 | 3. Jenkins | `Jenkinsfile`: parametryzowany potok w kontenerze z GPU – DVC → trening → ewaluacja → próg jakości → rejestracja w MLflow → wdrożenie API i test dymny |
 | 4. Wizualizacja i monitoring | MLflow (krzywe uczenia, porównanie przebiegów, macierz pomyłek), `dvc plots`, wykresy w notebooku, monitoring API w Grafanie (ruch, czas odpowiedzi, rozkład predykcji, pewność modelu) |
-| 5. DVC + MLflow | DVC: wersjonowanie danych i modelu, potok `dvc.yaml` + `params.yaml`; MLflow: śledzenie eksperymentów, poszukiwanie hiperparametrów (Optuna), Model Registry |
+| 5. DVC + MLflow | DVC: wersjonowanie danych i modelu, potok `dvc.yaml` + `params.yaml`; MLflow: śledzenie eksperymentów, poszukiwanie hiperparametrów, Model Registry |
 
 ## Struktura
 
@@ -78,7 +78,7 @@ docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile train u
 docker compose --profile train up --build
 ```
 
-JupyterLab: http://localhost:8888 → `notebooks/cryptobert.ipynb`.
+JupyterLab: http://localhost:8888/notebooks/cryptobert.ipynb
 
 Ten sam proces bez notebooka (w kontenerze lub lokalnie):
 
@@ -127,9 +127,9 @@ docker compose --profile serve up --build
 
 | Usługa | Adres |
 |---|---|
-| API (dokumentacja, testowanie zapytań) | http://localhost:8000/docs |
+| API | http://localhost:8000/docs |
 | Prometheus | http://localhost:9090 |
-| Grafana – dashboard „CryptoBERT API – monitoring” | http://localhost:3000 (admin / admin) |
+| Grafana dashboard | http://localhost:3000 (admin / admin) |
 
 ```bash
 curl -X POST http://localhost:8000/predict \
